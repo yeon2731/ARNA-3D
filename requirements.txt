@@ -1,0 +1,17 @@
+# Core medical imaging and 3D processing
+SimpleITK>=2.2.0
+trimesh>=3.15.0
+pyvista>=0.40.0
+open3d>=0.16.0
+
+# Scientific computing
+numpy>=1.21.0
+scipy>=1.9.0
+scikit-image>=0.19.0
+
+# Image processing
+opencv-python>=4.6.0
+
+# Utilities
+argparse
+json5
