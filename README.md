@@ -2,11 +2,11 @@
 
 A comprehensive Python pipeline for converting medical segmentation data (NIfTI format) to high-quality 3D models (GLB format) with advanced smoothing and reconstruction techniques.
 
-## 🏥 Overview
+## Overview
 
 This project provides a complete workflow for processing medical imaging data, specifically designed for kidney and related organ segmentation. It converts NIfTI segmentation files into smooth, production-ready 3D models suitable for visualization, 3D printing, or surgical planning.
 
-## ✨ Features
+## Features
 
 - **Medical Image Processing**: Robust preprocessing of NIfTI segmentation data
 - **Multi-organ Support**: Handles tumor, kidney, artery, vein, ureter, fat, and renal vessels
@@ -16,7 +16,7 @@ This project provides a complete workflow for processing medical imaging data, s
 - **Debug Mode**: Comprehensive intermediate file saving for pipeline inspection
 - **Configurable Pipeline**: JSON-based configuration for different processing stages
 
-## 🏗️ Architecture
+## Architecture
 
 The pipeline consists of five main stages:
 
@@ -47,38 +47,9 @@ The pipeline consists of five main stages:
    - Final quality enhancement
    - Production-ready mesh generation
 
-## 🛠️ Installation
-
-### Prerequisites
-
-```bash
-# Python 3.8+
-pip install SimpleITK
-pip install trimesh
-pip install pyvista
-pip install open3d
-pip install scikit-image
-pip install scipy
-pip install numpy
-pip install opencv-python
-```
-
 ### Setup
 
-1. Clone the repository:
-
-```bash
-git clone https://github.com/yourusername/arna-3d-smoothing.git
-cd arna-3d-smoothing
-```
-
-2. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Prepare your data structure:
+1. Prepare your data structure:
 
 ```
 dataset/
@@ -92,7 +63,7 @@ dataset/
     └── ...
 ```
 
-## 🚀 Usage
+## Usage
 
 ### Basic Usage
 
@@ -135,7 +106,7 @@ subject_id = "S000"  # Change to your subject ID
 base_folder = "path/to/your/project"
 ```
 
-## 📊 Supported Anatomical Structures
+## Label for Anatomical Structures
 
 | Label   | Structure                | ID   |
 | ------- | ------------------------ | ---- |
@@ -148,7 +119,7 @@ base_folder = "path/to/your/project"
 | Renal_a | Renal artery             | 7    |
 | Renal_v | Renal vein               | 8    |
 
-## 🔧 Pipeline Configuration
+## Pipeline Configuration
 
 ### Smoothing Functions
 
@@ -160,7 +131,7 @@ base_folder = "path/to/your/project"
 - **Default**: Normal-based mesh offset
 - **Custom**: User-defined dilation methods
 
-## 📁 Output Files
+## Output Files
 
 For each processed subject, the pipeline generates:
 
@@ -170,7 +141,7 @@ For each processed subject, the pipeline generates:
 - `{subject_id}_poisson_recon.glb`: Poisson reconstructed mesh
 - `{subject_id}_2nd_smoothed.glb`: Final production mesh
 
-## 🐛 Debug Mode
+## Debug Mode
 
 Enable debug mode for comprehensive pipeline inspection:
 
@@ -178,43 +149,23 @@ Enable debug mode for comprehensive pipeline inspection:
 debug = True  # in main.py
 ```
 
-This saves intermediate results at each processing stage for quality control and troubleshooting.
+This saves intermediate results and process time at each stage.
 
-## 📈 Performance
+## Performance
 
-Typical processing times (depending on hardware):
+Typical processing times (depending on hardware and data resolution):
 
-- Preprocessing: ~10-30 seconds
-- Initial GLB generation: ~30-60 seconds
-- First smoothing: ~60-120 seconds
-- Poisson reconstruction: ~30-90 seconds
-- Second smoothing: ~60-120 seconds
+- Preprocessing: seconds
+- Initial GLB generation: seconds
+- First smoothing: seconds
+- Poisson reconstruction: seconds
+- Second smoothing: seconds
 
-Total: ~3-6 minutes per subject
+Total: ~40 minutes per subject (Ryzen 5 7600 / 4070 TI Super / 32GB RAM / 1mm Image)
 
-## 🤝 Contributing
+## Libraries used
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [SimpleITK](https://simpleitk.org/) for medical image processing
+- [SimpleITK](https://simpleitk.org/) for medical image processing
 - [Trimesh](https://trimsh.org/) for 3D mesh processing
 - [PyVista](https://pyvista.org/) for advanced mesh operations
 - [Open3D](http://www.open3d.org/) for geometric processing
-
-## 📞 Contact
-
-For questions, issues, or collaborations, please open an issue on GitHub or contact the development team.
-
----
-
-**Note**: This software is intended for research and educational purposes. For clinical applications, please ensure proper validation and regulatory compliance.
