@@ -161,7 +161,7 @@ Typical processing times (depending on hardware and data resolution):
 - Poisson reconstruction: seconds
 - Second smoothing: seconds
 
-Total: ~40 minutes per subject (Ryzen 5 7600 / 4070 TI Super / 32GB RAM / 1mm Image)
+Total: ~40 seconds per subject (Ryzen 5 7600 / 4070 TI Super / 32GB RAM / 1mm Image)
 
 ## Libraries used
 
