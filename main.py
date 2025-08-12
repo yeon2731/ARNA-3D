@@ -24,12 +24,13 @@ def main(case_path):
     img = sitk.ReadImage(case_path)
     label_array = sitk.GetArrayFromImage(img)  # (Z, Y, X)
     # spacing = img.GetSpacing()[::-1]  # (X, Y, Z) → (Z, Y, X)
-    pp_img = processNii.preprocess(img, label_array)
-    pp_label_array = sitk.GetArrayFromImage(pp_img)
-    pp_spacing = pp_img.GetSpacing()[::-1]
+    
+    processed_img = processNii.preprocess(img, label_array)
+    processed_label_array = sitk.GetArrayFromImage(processed_img)
+    processed_spacing = processed_img.GetSpacing()[::-1]
 
     # get ndarray, return Trimesh scene
-    construct_glb = combineGLB.combine_glb(pp_label_array, pp_spacing)
+    construct_glb = combineGLB.combine_glb(processed_label_array, processed_spacing)
 
     # 1st smoothing
     new_scene = trimesh.Scene()
@@ -79,6 +80,10 @@ if __name__ == "__main__":
     출력은 결과가 저장된 경로를 반환합니다.
     output = "path/case_0000/3d/obj_A.nii.gz"
     '''
-    case_path = r".\data\case_0001\mask\segment_A.nii.gz"
+    import time
+    case_path = r".\data\case_0004\mask\segment_A.nii.gz"
+    start_time = time.time()  # 시작 시간 기록
     result = main(case_path)
+    end_time = time.time()  # 종료 시간 기록
     print(f"Process done, saved in {result}")
+    print(f"Execution time: {end_time - start_time:.2f} seconds")
