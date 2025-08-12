@@ -29,10 +29,10 @@ def main(case_path):
     total_label_array = sitk.GetArrayFromImage(total_img)
     kidney_label_array = (np.isin(total_label_array, [2, 24, 3, 23]) | (label_array == 2)).astype(np.uint8) * 2
     
-    # 디버깅
-    kidney_img = sitk.GetImageFromArray(kidney_label_array)
-    kidney_img.CopyInformation(img)
-    sitk.WriteImage(kidney_img, f"debugkidney.nii.gz")
+    # # 디버깅
+    # kidney_img = sitk.GetImageFromArray(kidney_label_array)
+    # kidney_img.CopyInformation(img)
+    # sitk.WriteImage(kidney_img, f"debugkidney.nii.gz")
     
     processed_img = processNii.preprocess(img, label_array, kidney_label_array)
     processed_label_array = sitk.GetArrayFromImage(processed_img)
