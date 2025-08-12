@@ -25,10 +25,6 @@ def create_mask(label_array, label):
     else:
         return label_array == label
 
-# def mask_to_mesh(mask, spacing=(1.0, 1.0, 1.0)):
-#     verts, faces, _, _ = measure.marching_cubes(mask, level=0.5, spacing=spacing)
-#     return trimesh.Trimesh(vertices=verts, faces=faces)
-
 def mask_to_mesh(mask, spacing=(1.0, 1.0, 1.0)):
     verts, faces, _, _ = measure.marching_cubes(mask, level=0.5, spacing=spacing)
     mesh = trimesh.Trimesh(vertices=verts, faces=faces)
@@ -67,11 +63,16 @@ def rotate_and_center(scene):
     new_scene = trimesh.Scene(transformed_geometries)
     return new_scene
 
-def combine_glb(label_array, spacing):
+def combine_glb(label_array, spacing, kidney_label_array):
     # ===== Scene 구성 =====
     scene = trimesh.Scene() # 결과 Scene
     for name, label in LABELS.items():
-        mask = create_mask(label_array, label)
+        if name == "Kidney":
+            mask1 = create_mask(label_array, label)
+            mask2 = create_mask(kidney_label_array, 2)
+            mask = mask1 | mask2
+        else:
+            mask = create_mask(label_array, label)
 
         if not np.any(mask):
             print(f"[Warning] Skipping {name}: mask is empty.")
@@ -89,7 +90,7 @@ def combine_glb(label_array, spacing):
                     part_name = f"{name}-{side}"
                     part.metadata["name"] = part_name
                     scene.add_geometry(part, node_name=part_name)
-            elif name in ["Tumor"]:    # Tumor 노멀 재계산
+            elif name in ["Tumor"]:
                 mesh = mask_to_mesh_fixnormal(mask, spacing=spacing)
                 mesh.metadata["name"] = name
                 scene.add_geometry(mesh, node_name=name)

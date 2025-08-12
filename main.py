@@ -1,9 +1,10 @@
-import os, sys, json, re
+import os, sys, json, re, time
 import SimpleITK as sitk
 import trimesh
 import pyvista as pv
 from pathlib import Path
 from threeDRecon import combineGLB, processNii, processMesh
+import numpy as np
 
 def parse_info(case_path):
     # id extraction
@@ -24,12 +25,21 @@ def main(case_path):
     img = sitk.ReadImage(case_path)
     label_array = sitk.GetArrayFromImage(img)  # (Z, Y, X)
     # spacing = img.GetSpacing()[::-1]  # (X, Y, Z) → (Z, Y, X)
-    pp_img = processNii.preprocess(img, label_array)
-    pp_label_array = sitk.GetArrayFromImage(pp_img)
-    pp_spacing = pp_img.GetSpacing()[::-1]
+    total_img = sitk.ReadImage(case_path.replace("segment_", "total_"))
+    total_label_array = sitk.GetArrayFromImage(total_img)
+    kidney_label_array = (np.isin(total_label_array, [2, 24, 3, 23]) | (label_array == 2)).astype(np.uint8) * 2
+    
+    # 디버깅
+    kidney_img = sitk.GetImageFromArray(kidney_label_array)
+    kidney_img.CopyInformation(img)
+    sitk.WriteImage(kidney_img, f"debugkidney.nii.gz")
+    
+    processed_img = processNii.preprocess(img, label_array, kidney_label_array)
+    processed_label_array = sitk.GetArrayFromImage(processed_img)
+    processed_spacing = processed_img.GetSpacing()[::-1]
 
     # get ndarray, return Trimesh scene
-    construct_glb = combineGLB.combine_glb(pp_label_array, pp_spacing)
+    construct_glb = combineGLB.combine_glb(processed_label_array, processed_spacing, kidney_label_array)
 
     # 1st smoothing
     new_scene = trimesh.Scene()
@@ -79,6 +89,6 @@ if __name__ == "__main__":
     출력은 결과가 저장된 경로를 반환합니다.
     output = "path/case_0000/3d/obj_A.nii.gz"
     '''
-    case_path = r".\data\case_0001\mask\segment_A.nii.gz"
+    case_path = r".\data\case_0003\mask\segment_A.nii.gz"
     result = main(case_path)
     print(f"Process done, saved in {result}")
