@@ -25,10 +25,6 @@ def create_mask(label_array, label):
     else:
         return label_array == label
 
-# def mask_to_mesh(mask, spacing=(1.0, 1.0, 1.0)):
-#     verts, faces, _, _ = measure.marching_cubes(mask, level=0.5, spacing=spacing)
-#     return trimesh.Trimesh(vertices=verts, faces=faces)
-
 def mask_to_mesh(mask, spacing=(1.0, 1.0, 1.0)):
     verts, faces, _, _ = measure.marching_cubes(mask, level=0.5, spacing=spacing)
     mesh = trimesh.Trimesh(vertices=verts, faces=faces)
@@ -74,7 +70,7 @@ def combine_glb(label_array, spacing):
         mask = create_mask(label_array, label)
 
         if not np.any(mask):
-            print(f"[Warning] Skipping {name}: mask is empty.")
+            print(f"[WARN] Skipping {name}: mask is empty.")
             continue
 
         try:
