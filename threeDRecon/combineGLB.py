@@ -10,7 +10,7 @@ import pyvista as pv
 
 LABELS = {
     "Tumor": 1,
-    "Kidney": [1, 2],   # Included tumor
+    "Kidney": [1, 2],   # Include tumor
     "Artery": 3,
     "Vein": 4,
     "Ureter": 5,
@@ -89,8 +89,11 @@ def combine_glb(label_array, spacing):
                     part_name = f"{name}-{side}"
                     part.metadata["name"] = part_name
                     scene.add_geometry(part, node_name=part_name)
-
-            else:   # 나머지 Mesh 처리
+            elif name in ["Tumor"]:    # Tumor 노멀 재계산
+                mesh = mask_to_mesh_fixnormal(mask, spacing=spacing)
+                mesh.metadata["name"] = name
+                scene.add_geometry(mesh, node_name=name)
+            else:
                 mesh = mask_to_mesh(mask, spacing=spacing)
                 mesh.metadata["name"] = name
                 scene.add_geometry(mesh, node_name=name)

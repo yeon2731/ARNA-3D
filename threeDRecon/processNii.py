@@ -239,22 +239,29 @@ def preprocess(img, label_array):
     artery_orig = (label_array==3).astype(np.uint8)
     zf_a, zb_a = get_gradient_range(artery_orig, z0, z1, percentile=95)
     print(f"Artery gradient range: zf={zf_a}, zb={zb_a}")
-    artery_bridged, _ = interpolate_circle_bridge(artery_orig, zf_a, zb_a)
-    renal_a = extract_branches(artery_orig, artery_bridged, top_n=2)
     
     # vein 처리
     vein_orig = (label_array==4).astype(np.uint8)
-    # vein_mask = get_largest_component(vein_orig)
     zf_v, zb_v = get_gradient_range(vein_orig, z0, z1, percentile=90)
     print(f"Vein gradient range: zf={zf_v}, zb={zb_v}")
+    
+    # 범위 체크
+    total_slices = label_array.shape[0]
+    artery_range = zb_a - zf_a + 1
+    vein_range = zb_v - zf_v + 1
+    threshold = total_slices * 0.5
+    
+    if artery_range >= threshold or vein_range >= threshold:
+        print(f"fallback")
+        # fallback logic
+    else:
+        print("...")
+        # as below
+        
+    artery_bridged, _ = interpolate_circle_bridge(artery_orig, zf_a, zb_a)
+    renal_a = extract_branches(artery_orig, artery_bridged, top_n=2)
     vein_bridged = interpolate_vein(vein_orig, zf_v, zb_v)
-
-    # save vein bridged for debugging
-    # debug_vein_path = os.path.join(r'C:\Users\USER\Documents\vscode_projects\arna_3d_smoothing\ver0523\dataset\output', f"vein_bridged.nii.gz")
-    # sitk.WriteImage(sitk.GetImageFromArray(vein_bridged.astype(np.uint8)), debug_vein_path)
-
     renal_v = extract_branches(vein_orig, vein_bridged, top_n=2)
-
 
     # 혈관 마스크 생성 (원본 + 처리된 혈관)
     # vessel_mask = (label_array == 3) | renal_a.astype(bool) # 동맥만
@@ -277,7 +284,7 @@ def preprocess(img, label_array):
     tumor_mask = (label_array == 1)
 
     structure = np.ones((3,3,3), dtype=bool)
-    dilated_kidney = binary_dilation(kidney_mask, structure=structure)
+    dilated_kidney = binary_dilation(kidney_mask, structure=structure, iterations=2)
     kidney_boundary = dilated_kidney & ~kidney_mask
     kidney_boundary[tumor_mask] = False
     # kidney_boundary[vessel_mask] = False  # 혈관 영역 제외
