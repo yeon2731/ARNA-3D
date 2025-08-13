@@ -1,4 +1,4 @@
-import os, sys, json, re
+import os, sys, json, re, time
 import SimpleITK as sitk
 import trimesh
 import pyvista as pv
@@ -18,6 +18,7 @@ def parse_info(case_path):
     return case_id, case_phase
 
 def main(case_path):
+    start_time = time.time()
     _, phase = parse_info(case_path)
     base_path = Path(case_path).parent.parent
     
@@ -33,6 +34,7 @@ def main(case_path):
     construct_glb = combineGLB.combine_glb(processed_label_array, processed_spacing)
 
     # 1st smoothing
+    print("[INFO] Step1")
     new_scene = trimesh.Scene()
     with open(os.path.join("threeDRecon", "config", "parts_config1.json"), "r") as f:
         parts_config1 = json.load(f)
@@ -51,6 +53,7 @@ def main(case_path):
     poisson_recon = processMesh.process_poisson(new_scene)
     
     # 2nd smoothing
+    print("[INFO] Step2")
     final_scene = trimesh.Scene()
     with open(os.path.join("threeDRecon", "config", "parts_config2.json"), "r") as f:
         parts_config2 = json.load(f)
@@ -65,11 +68,12 @@ def main(case_path):
             dilation_kwargs=cfg.get("dilation_kwargs", {}),
         )
 
-    # 저장
     save_dir = os.path.join(base_path, '3d')
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, f'obj_{phase}.glb')
     final_scene.export(save_path)
+    end_time = time.time()
+    print(f"Process Done.\nExecution Time: {end_time - start_time:.2f} seconds")
     return save_path
 
 if __name__ == "__main__":
@@ -80,10 +84,5 @@ if __name__ == "__main__":
     출력은 결과가 저장된 경로를 반환합니다.
     output = "path/case_0000/3d/obj_A.nii.gz"
     '''
-    import time
-    case_path = r".\data\case_0004\mask\segment_A.nii.gz"
-    start_time = time.time()  # 시작 시간 기록
+    case_path = r".\data\case_0002_fallbacktest\mask\segment_A.nii.gz"
     result = main(case_path)
-    end_time = time.time()  # 종료 시간 기록
-    print(f"Process done, saved in {result}")
-    print(f"Execution time: {end_time - start_time:.2f} seconds")

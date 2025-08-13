@@ -108,16 +108,16 @@ base_folder = "path/to/your/project"
 
 ## Label for Anatomical Structures
 
-| Label   | Structure                | ID   |
-| ------- | ------------------------ | ---- |
-| Tumor   | Primary tumor            | 1    |
-| Kidney  | Kidney (including tumor) | 1, 2 |
-| Artery  | Arterial system          | 3    |
-| Vein    | Venous system            | 4    |
-| Ureter  | Ureter                   | 5    |
-| Fat     | Surrounding fat          | 6    |
-| Renal_a | Renal artery             | 7    |
-| Renal_v | Renal vein               | 8    |
+| Label   | Structure       | ID  |
+| ------- | --------------- | --- |
+| Tumor   | Kidney Tumor    | 1   |
+| Kidney  | Kidney          | 2   |
+| Artery  | Arterial system | 3   |
+| Vein    | Venous system   | 4   |
+| Ureter  | Ureter          | 5   |
+| Fat     | Surrounding fat | 6   |
+| Renal_a | Renal artery    | 7   |
+| Renal_v | Renal vein      | 8   |
 
 ## Pipeline Configuration
 

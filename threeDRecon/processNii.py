@@ -61,19 +61,6 @@ def get_radii_array(mask_3d, z_start, z_end):
         radii[z] = [r_max, r_min]
     return radii
 
-# def get_gradient_range(mask_3d, z_start, z_end):
-#     radii = get_radii_array(mask_3d, z_start, z_end)
-#     # gradient
-#     valid = np.all(radii>0, axis=1)
-#     grad = np.zeros_like(valid, dtype=float)
-#     if valid.sum()>=2:
-#         grad_sub = np.gradient(radii[valid,1] - radii[valid,0])
-#         grad[valid] = np.abs(grad_sub)
-#     # z_front/back
-#     zf = np.argmax(grad >= 1)
-#     zb = len(grad) - 1 - np.argmax((grad >= 1)[::-1])
-#     return zf, zb
-
 def get_gradient_range(mask_3d, z_start, z_end, percentile=95):
     radii = get_radii_array(mask_3d, z_start, z_end)
     # gradient
@@ -229,54 +216,58 @@ def interpolate_vein(mask3d, z_front, z_back, dilation_iters=3):
     bridged = get_largest_component(bridged, n=1)
     return bridged
 
-def preprocess(img, label_array):
+def process_vessels(label_array, z0, z1):
+    artery_orig = (label_array==3).astype(np.uint8)
+    vein_orig = (label_array==4).astype(np.uint8)
+    
+    # 혈관 라벨 체크
+    artery_exists = artery_orig.any()
+    vein_exists = vein_orig.any()
+    renal_a = np.zeros_like(artery_orig)
+    renal_v = np.zeros_like(vein_orig)
+    
+    try:
+        total_slices = label_array.shape[0]
+        if artery_exists:
+            zf_a, zb_a = get_gradient_range(artery_orig, z0, z1, percentile=95)
+            artery_range = zb_a - zf_a + 1 if (zf_a is not None and zb_a is not None) else total_slices
+            print(f"[INFO] Artery: index=[{zf_a}-{zb_a}], gradient range={artery_range}/{total_slices} ({artery_range/total_slices*100:.1f}%)")
+            
+            if artery_range < total_slices * 0.5 and zf_a is not None and zb_a is not None:
+                artery_bridged, _ = interpolate_circle_bridge(artery_orig, zf_a, zb_a)
+                renal_a = extract_branches(artery_orig, artery_bridged, top_n=2)
+            else:
+                print("[WARN] Artery: gradient range exceeded - return zero array")
+        else:
+            print("[WARN] Artery: label not found, skipping.")
+        
+        if vein_exists:
+            zf_v, zb_v = get_gradient_range(vein_orig, z0, z1, percentile=90)
+            vein_range = zb_v - zf_v + 1 if (zf_v is not None and zb_v is not None) else total_slices
+            print(f"[INFO] Vein  : index=[{zf_v}-{zb_v}], gradient range={vein_range}/{total_slices} ({vein_range/total_slices*100:.1f}%)")
+            
+            if vein_range < total_slices * 0.7 and zf_v is not None and zb_v is not None:
+                vein_bridged = interpolate_vein(vein_orig, zf_v, zb_v)
+                renal_v = extract_branches(vein_orig, vein_bridged, top_n=2)
+            else:
+                print("[WARN] Vein: gradient range exceeded - return zero array")
+        else:
+            print("[WARN] Vein: label not found, skipping.")
+                
+        return renal_a, renal_v
+        
+    except Exception as e:
+        print(f"[ERROR] Vessel processing failed: {e} - return zero array")
+        return renal_a, renal_v
 
+def preprocess(img, label_array):
     # ===== Auto Branch Split =====
     kidney = (label_array==2).any(axis=(1,2))
     z0, z1 = np.where(kidney)[0][[0,-1]]
+    renal_a, renal_v = process_vessels(label_array, z0, z1)
 
-    # artery 처리
-    artery_orig = (label_array==3).astype(np.uint8)
-    zf_a, zb_a = get_gradient_range(artery_orig, z0, z1, percentile=95)
-    print(f"Artery gradient range: zf={zf_a}, zb={zb_a}")
-    
-    # vein 처리
-    vein_orig = (label_array==4).astype(np.uint8)
-    zf_v, zb_v = get_gradient_range(vein_orig, z0, z1, percentile=90)
-    print(f"Vein gradient range: zf={zf_v}, zb={zb_v}")
-    
-    # 범위 체크
-    total_slices = label_array.shape[0]
-    artery_range = zb_a - zf_a + 1
-    vein_range = zb_v - zf_v + 1
-    threshold = total_slices * 0.5
-    
-    if artery_range >= threshold or vein_range >= threshold:
-        print(f"fallback")
-        # fallback logic
-    else:
-        print("...")
-        # as below
-        
-    artery_bridged, _ = interpolate_circle_bridge(artery_orig, zf_a, zb_a)
-    renal_a = extract_branches(artery_orig, artery_bridged, top_n=2)
-    vein_bridged = interpolate_vein(vein_orig, zf_v, zb_v)
-    renal_v = extract_branches(vein_orig, vein_bridged, top_n=2)
-
-    # 혈관 마스크 생성 (원본 + 처리된 혈관)
-    # vessel_mask = (label_array == 3) | renal_a.astype(bool) # 동맥만
-    vessel_mask = (label_array == 3) | (label_array == 4) | renal_a.astype(bool) | renal_v.astype(bool) #정맥 + 동맥
-
-    # # ===== Fat dilation =====
-    # kidney_mask = (label_array == 2)
-    # fat_mask = (label_array == 6)
-    # tumor_mask = (label_array == 1)
-    # structure = np.ones((3,3,3), dtype=bool)
-    # dilated_kidney = binary_dilation(kidney_mask, structure=structure)
-    # kidney_boundary = dilated_kidney & ~kidney_mask
-    # kidney_boundary[tumor_mask] = False
-    # fat_mask_dilated = fat_mask | kidney_boundary
-    # label_array[fat_mask_dilated] = 6
+    # 혈관 마스크 생성
+    vessel_mask = (label_array == 3) | (label_array == 4) | renal_a.astype(bool) | renal_v.astype(bool)
 
     # ===== Fat dilation (혈관 영역 제외) =====
     kidney_mask = (label_array == 2)
@@ -287,55 +278,17 @@ def preprocess(img, label_array):
     dilated_kidney = binary_dilation(kidney_mask, structure=structure, iterations=2)
     kidney_boundary = dilated_kidney & ~kidney_mask
     kidney_boundary[tumor_mask] = False
-    # kidney_boundary[vessel_mask] = False  # 혈관 영역 제외
     fat_mask_dilated = fat_mask | kidney_boundary
 
     # 원본 segmentation 위에 renal labels 덮어쓰기
     out_arr = label_array.copy()
-    out_arr[fat_mask_dilated] = 6
+    out_arr[fat_mask_dilated] = 6                    # fat label 추가
     out_arr[vessel_mask] = label_array[vessel_mask]  # 원본 혈관 라벨 복원
     out_arr[renal_a.astype(bool)] = 7
-    out_arr[renal_v.astype(bool)] = 8 # 잠시 해제
+    out_arr[renal_v.astype(bool)] = 8
     out_img = sitk.GetImageFromArray(out_arr.astype(label_array.dtype))
     out_img.CopyInformation(img)
     return out_img
-
-def xpreprocess(img, label_array):
-
-    # ===== Auto Branch Split =====
-    kidney = (label_array==2).any(axis=(1,2))
-    z0, z1 = np.where(kidney)[0][[0,-1]]
-
-    # artery 처리
-    artery_orig = (label_array==3).astype(np.uint8)
-    zf_a, zb_a = get_gradient_range(artery_orig, z0, z1, percentile=95)
-    print(f"Artery gradient range: zf={zf_a}, zb={zb_a}")
-    artery_bridged, _ = interpolate_circle_bridge(artery_orig, zf_a, zb_a)
-    renal_a = extract_branches(artery_orig, artery_bridged, top_n=2)
-    vessel_mask = (label_array == 3) | (label_array == 4) | renal_a.astype(bool)
-
-    # ===== Fat dilation (혈관 영역 제외) =====
-    kidney_mask = (label_array == 2)
-    fat_mask = (label_array == 6)
-    tumor_mask = (label_array == 1)
-
-    structure = np.ones((3,3,3), dtype=bool)
-    dilated_kidney = binary_dilation(kidney_mask, structure=structure)
-    kidney_boundary = dilated_kidney & ~kidney_mask
-    kidney_boundary[tumor_mask] = False
-    # kidney_boundary[vessel_mask] = False  # 혈관 영역 제외
-    fat_mask_dilated = fat_mask | kidney_boundary
-
-    # 원본 segmentation 위에 renal labels 덮어쓰기
-    out_arr = label_array.copy()
-    out_arr[fat_mask_dilated] = 6
-    out_arr[vessel_mask] = label_array[vessel_mask]  # 원본 혈관 라벨 복원
-    out_arr[renal_a.astype(bool)] = 7
-    # out_arr[renal_v.astype(bool)] = 8 # 잠시 해제
-    out_img = sitk.GetImageFromArray(out_arr.astype(label_array.dtype))
-    out_img.CopyInformation(img)
-    return out_img
-
 
 if __name__ == '__main__':
     import sys

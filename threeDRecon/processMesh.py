@@ -43,10 +43,10 @@ def mesh_smoothing(
 
     mesh = scene.geometry.get(part_name)
     if mesh is None:
-        print(f"[WARN] '{part_name}' not found in scene.")
+        print(f"[WARN] Skipping {part_name}: mesh not found in scene.")
         return
 
-    print(f"[INFO]: Processing {part_name}")
+    print(f"[INFO] Processing {part_name}")
     # Convert to PyVista PolyData: faces=[n, v0, v1, v2, ...]
     vertices = mesh.vertices
     faces = np.hstack([[3, *f] for f in mesh.faces])
@@ -56,16 +56,16 @@ def mesh_smoothing(
     if dilation_func:
         dilation_func = DILATION_FUNC_MAP.get(dilation_func)
         if dilation_func is None:
-            raise ValueError(f"Unknown dilation_type: {dilation_type}")
-        print(f"    Dilation: {part_name}")
+            raise ValueError(f"[ERROR] Unknown dilation_type: {dilation_type}")
+        print(f"{'':7}- Apply Dilation")
         pv_mesh = dilation_func(pv_mesh, **(dilation_kwargs or {}))
 
     # Smoothing
     if smoothing_func:
         smoothing_func = SMOOTHING_FUNC_MAP.get(smoothing_func)
         if smoothing_func is None:
-            raise ValueError(f"Unknown smoothing_type: {smoothing_type}")
-        print(f"    Smoothing: {part_name}")
+            raise ValueError(f"[ERROR] Unknown smoothing_type: {smoothing_type}")
+        print(f"{'':7}- Apply Smoothing")
         pv_mesh = smoothing_func(pv_mesh, **(smoothing_kwargs or {}))
 
     # Convert back to trimesh
@@ -78,9 +78,9 @@ def mesh_smoothing(
 
 def poisson_reconstruction(mesh_list, depth=8):
     if not mesh_list:
-        raise ValueError("입력 mesh_list가 비어 있습니다.")
+        raise ValueError("[ERROR] Input mesh_list empty")
     
-    print(f"[INFO] 병합된 mesh 수: {len(mesh_list)}")
+    print(f"{'':7}- Merged mesh: {len(mesh_list)}")
 
     # 병합
     merged = trimesh.util.concatenate(mesh_list)
@@ -109,7 +109,7 @@ def poisson_reconstruction(mesh_list, depth=8):
     # Poisson 결과에 대해 LCC 적용
     components = tri_mesh.split(only_watertight=False)
     if len(components) > 1:
-        print(f"[INFO] Poisson 결과에서 연결된 컴포넌트 개수: {len(components)} → 가장 큰 컴포넌트만 사용")
+        print(f"{'':7}- Connected components: {len(components)} - using largest")
         tri_mesh = max(components, key=lambda c: c.area)
 
     return tri_mesh
@@ -128,7 +128,7 @@ def process_poisson(scene):
     # Artery (Aretry + Renal_a)
     artery_meshes = [name_to_mesh[name] for name in artery_group if name in name_to_mesh]
     if artery_meshes:
-        print("[INFO] Artery 그룹 처리 중...")
+        print("[INFO] Processing Artery group")
         smoothed_artery = poisson_reconstruction(artery_meshes, depth=8)
         smoothed_artery.metadata["name"] = "Artery"
         rec_scene.add_geometry(smoothed_artery, node_name="Artery")
@@ -136,43 +136,7 @@ def process_poisson(scene):
     # Vein System (Vein + Renal_v)
     vein_meshes = [name_to_mesh[name] for name in vein_group if name in name_to_mesh]
     if vein_meshes:
-        print("[INFO] Vein 그룹 처리 중...")
-        smoothed_vein = poisson_reconstruction(vein_meshes, depth=8)
-        smoothed_vein.metadata["name"] = "Vein"
-        rec_scene.add_geometry(smoothed_vein, node_name="Vein")
-
-    # 나머지 구조물은 그대로 추가
-    excluded = set(artery_group + vein_group)
-    for name, mesh in name_to_mesh.items():
-        if name not in excluded:
-            mesh.name = name
-            mesh.metadata["name"] = name
-            rec_scene.add_geometry(mesh, node_name=name)
-
-    return rec_scene
-def process_poisson(scene):
-    # 이름 → mesh 매핑
-    name_to_mesh = {mesh.metadata.get("name", k): mesh for k, mesh in scene.geometry.items()}
-
-    # 병합 대상 그룹 정의
-    artery_group = ["Artery", "Renal_a"]
-    vein_group = ["Vein", "Renal_v"]
-
-    # 결과 scene
-    rec_scene = trimesh.Scene()
-
-    # Artery (Aretry + Renal_a)
-    artery_meshes = [name_to_mesh[name] for name in artery_group if name in name_to_mesh]
-    if artery_meshes:
-        print("[INFO] Artery 그룹 처리 중...")
-        smoothed_artery = poisson_reconstruction(artery_meshes, depth=8)
-        smoothed_artery.metadata["name"] = "Artery"
-        rec_scene.add_geometry(smoothed_artery, node_name="Artery")
-
-    # Vein System (Vein + Renal_v)
-    vein_meshes = [name_to_mesh[name] for name in vein_group if name in name_to_mesh]
-    if vein_meshes:
-        print("[INFO] Vein 그룹 처리 중...")
+        print("[INFO] Processing Vein group")
         smoothed_vein = poisson_reconstruction(vein_meshes, depth=8)
         smoothed_vein.metadata["name"] = "Vein"
         rec_scene.add_geometry(smoothed_vein, node_name="Vein")
